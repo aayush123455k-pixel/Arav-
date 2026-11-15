@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ARAV AI — Personal Jarvis Android &amp; Web Assistant</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cyan-glow: rgba(6, 182, 212, 0.45);
+      --blue-glow: rgba(59, 130, 246, 0.35);
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 50% 15%, #0c192c 0%, #050b14 60%, #02050a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes pulseCore {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 28px var(--cyan-glow), inset 0 0 18px var(--cyan-glow); }
+      50% { transform: scale(1.06); box-shadow: 0 0 48px rgba(34, 211, 238, 0.75), inset 0 0 28px rgba(34, 211, 238, 0.65); }
+    }
+    .ring-spin {
+      animation: spinSlow 18s linear infinite;
+    }
+    .ring-spin-rev {
+      animation: spinReverse 12s linear infinite;
+    }
+    .core-pulse {
+      animation: pulseCore 2.6s ease-in-out infinite;
+    }
+    .listening-active {
+      animation: pulseCore 0.9s ease-in-out infinite !important;
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 60px rgba(34, 211, 238, 0.95), inset 0 0 30px rgba(6, 182, 212, 0.8) !important;
+    }
+    .hud-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .hud-card-active {
+      border-color: rgba(34, 211, 238, 0.65);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- Top Jarvis Status Header -->
+  <header class="sticky top-0 z-30 border-b border-cyan-500/25 bg-slate-950/90 backdrop-blur-md px-3 sm:px-5 py-2.5">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="relative w-9 h-9 rounded-full bg-cyan-500/15 border border-cyan-400/60 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping absolute"></span>
+          <span class="w-3.5 h-3.5 rounded-full bg-cyan-300 relative"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-extrabold tracking-wider text-cyan-300">ARAV AI</h1>
+            <span class="text-[10px] mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">JARVIS OS v3.0</span>
+          </div>
+          <p id="headerStatusText" class="text-[11px] text-slate-400">System Online • Brain: Built-in + Gemini API</p>
+        </div>
+      </div>
+
+      <!-- Action Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button id="btnToggleVoice" onclick="toggleVoiceOutput()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 border border-cyan-400/30 flex items-center gap-1.5 transition">
+          <span id="voiceIcon">🔊</span>
+          <span id="voiceLabel" class="hidden sm:inline">Voice: ON</span>
+        </button>
+
+        <button id="btnToggleLang" onclick="toggleRecognitionLang()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600/50 transition mono">
+          <span id="langBadge">HI-IN</span>
+        </button>
+
+        <button id="btnOpenKeyModal" onclick="openApiKeyModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 flex items-center gap-1.5 transition">
+          <span>🔑</span>
+          <span id="apiKeyStatusBadge">API Key</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-6xl mx-auto mt-2.5 grid grid-cols-4 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+      <button id="tabBtnHud" onclick="switchTab('hud')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 shadow">
+        <span>🎙️</span>
+        <span>Arav HUD</span>
+      </button>
+      <button id="tabBtnControl" onclick="switchTab('control')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>📱</span>
+        <span>App &amp; Screen</span>
+      </button>
+      <button id="tabBtnCode" onclick="switchTab('code')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>💻</span>
+        <span>Code Studio</span>
+      </button>
+      <button id="tabBtnTermux" onclick="switchTab('termux')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>📦</span>
+        <span>Termux APK</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
+
+    <!-- TAB 1: ARAV JARVIS HUD & VOICE ASSISTANT -->
+    <section id="viewHud" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <!-- Left Column: Jarvis Core & Voice Controls -->
+      <div class="lg:col-span-5 hud-card rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-between relative overflow-hidden">
+        <div class="w-full flex items-center justify-between text-xs text-cyan-300/80 mono mb-2">
+          <span>CORE: ARAV-MK3</span>
+          <span id="clockReadout">12:00:00</span>
+        </div>
+
+        <!-- Animated Jarvis Arc Reactor & Mic Button -->
+        <div class="my-4 relative flex items-center justify-center w-52 h-52 sm:w-60 sm:h-60">
+          <!-- Outer Dashed Ring -->
+          <div class="absolute inset-0 rounded-full border-2 border-dashed border-cyan-400/35 ring-spin"></div>
+          <!-- Middle Tech Ring -->
+          <div class="absolute inset-4 rounded-full border border-cyan-300/30 border-t-cyan-400 border-b-blue-500 ring-spin-rev"></div>
+          <!-- Inner Glow Ring -->
+          <div class="absolute inset-9 rounded-full bg-cyan-500/10 border border-cyan-400/40"></div>
+
+          <!-- Center Interactive Mic Button -->
+          <button id="btnArcMic" onclick="toggleMicListening()" class="relative z-10 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-b from-cyan-950 via-slate-900 to-slate-950 border-2 border-cyan-400/80 core-pulse flex flex-col items-center justify-center text-center p-3 cursor-pointer transition group">
+            <span id="micCenterIcon" class="text-3xl sm:text-4xl mb-1 group-hover:scale-110 transition">🎙️</span>
+            <span class="text-xs font-extrabold tracking-widest text-cyan-200 uppercase">ARAV AI</span>
+            <span id="micStatusSub" class="text-[10px] text-cyan-300/80 mono mt-0.5">Tap to Speak</span>
+          </button>
+        </div>
+
+        <!-- Live Voice Transcript / Wave Status -->
+        <div class="w-full bg-slate-950/80 border border-cyan-500/25 rounded-xl p-3 text-center mb-3">
+          <div class="text-[11px] uppercase tracking-wider text-cyan-400 font-semibold mb-1" id="liveStateTitle">Ready for Command, Boss</div>
+          <p id="liveTranscriptPreview" class="text-xs text-slate-300 italic min-h-[1.25rem]">"हेलो आरव, मेरे लिए YouTube ओपन कर दो" या नीचे से कमांड चुनें</p>
+        </div>
+
+        <!-- Quick Demo Voice Commands (Directly from Video Scenarios) -->
+        <div class="w-full">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">⚡ Video Demo Voice Commands (1-Tap Test):</p>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="runPresetCommand('हेलो आरव, अपना परिचय दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              👋 "हेलो आरव, परिचय दो"
+            </button>
+            <button onclick="runPresetCommand('आरव, मेरे लिए YouTube ओपन कर दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              ▶️ "YouTube ओपन कर दो"
+            </button>
+            <button onclick="runPresetCommand('एक कोड ओपन करके कैलकुलेटर का HTML में कोड लिखो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🧮 "कैलकुलेटर का HTML कोड लिखो"
+            </button>
+            <button onclick="runPresetCommand('YouTube पर STUDIO OF CODING AI चैनल सर्च करो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🔍 "YouTube चैनल सर्च करो"
+            </button>
+            <button onclick="runPresetCommand('ChatGPT पर जाने के लिए एक इमेज का प्रॉम्प्ट लिख दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🎨 "इमेज का प्रॉम्प्ट लिख दो"
+            </button>
+            <button onclick="runPresetCommand('स्क्रीन रीड करो और होम पेज पर आ जाओ')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              📲 "स्क्रीन रीड और होम पेज"
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Conversation & Command Terminal -->
+      <div class="lg:col-span-7 hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[440px]">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
+              <span>💬</span>
+              <span>Arav Neural Command Log</span>
+            </h2>
+            <p class="text-[11px] text-slate-400">Hindi, Hinglish &amp; English Voice/Text Commands</p>
+          </div>
+          <button onclick="clearChatHistory()" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            🧹 Clear Log
+          </button>
+        </div>
+
+        <!-- Messages Feed -->
+        <div id="chatMessagesContainer" class="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[340px] sm:max-h-[380px]"></div>
+
+        <!-- Input Bar -->
+        <form id="chatForm" onsubmit="handleChatSubmit(event)" class="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
+          <button type="button" onclick="toggleMicListening()" class="p-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 transition" title="Voice Input">
+            🎙️
+          </button>
+          <input
+            id="chatInputBox"
+            type="text"
+            placeholder="आरव को कमांड दें (जैसे: 'YouTube ओपन करो', 'कैलकुलेटर का कोड लिखो')..."
+            class="flex-1 bg-slate-900/95 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition"
+          />
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-lg shadow-cyan-500/20">
+            Send ➤
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 2: PHONE CONTROL, APP OPENER & ACCESSIBILITY SCREEN CONTROLLER -->
+    <section id="viewControl" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- App Launcher & Intent Controller -->
+        <div class="hud-card rounded-2xl p-4 sm:p-5">
+          <h2 class="text-sm sm:text-base font-bold text-cyan-300 mb-1 flex items-center gap-2">
+            <span>🚀</span>
+            <span>Arav App Launcher &amp; Deep-Link Intents</span>
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">
+            वीडियो में बताए अनुसार फोन के ऐप्स सीधे खोलें या YouTube पर कोई भी चैनल/गाना सर्च करें:
+          </p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+            <button onclick="launchExternalApp('youtube', 'https://m.youtube.com')" class="p-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">▶️</span>
+              <span class="text-xs font-semibold text-red-200">YouTube खोलें</span>
+            </button>
+            <button onclick="launchExternalApp('whatsapp', 'https://wa.me/')" class="p-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">💬</span>
+              <span class="text-xs font-semibold text-emerald-200">WhatsApp</span>
+            </button>
+            <button onclick="launchExternalApp('chatgpt', 'https://chatgpt.com/')" class="p-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">🤖</span>
+              <span class="text-xs font-semibold text-teal-200">ChatGPT</span>
+            </button>
+            <button onclick="launchExternalApp('instagram', 'https://www.instagram.com/')" class="p-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">📸</span>
+              <span class="text-xs font-semibold text-pink-200">Instagram</span>
+            </button>
+            <button onclick="launchExternalApp('telegram', 'https://web.telegram.org/')" class="p-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">✈️</span>
+              <span class="text-xs font-semibold text-sky-200">Telegram</span>
+            </button>
+            <button onclick="launchExternalApp('aistudio', 'https://aistudio.google.com/app/apikey')" class="p-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">🔑</span>
+              <span class="text-xs font-semibold text-amber-200">Google AI Key</span>
+            </button>
+          </div>
+
+          <!-- Direct YouTube Search & Song Player -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <label for="ytSearchInput" class="block text-xs font-semibold text-slate-300 mb-1.5">
+              🎵 YouTube पर गाना या चैनल सर्च करके ओपन करें:
+            </label>
+            <div class="flex gap-2">
+              <input id="ytSearchInput" type="text" value="STUDIO OF CODING AI" placeholder="गाने या चैनल का नाम लिखें..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-cyan-400" />
+              <button onclick="searchOnYouTubeNow()" class="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs transition">
+                Search &amp; Open
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen Reader & Touch Automation Controller -->
+        <div class="hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-sm sm:text-base font-bold text-cyan-300 flex items-center gap-2">
+                <span>📲</span>
+                <span>Accessibility Screen Reader &amp; Auto-Touch</span>
+              </h2>
+              <span id="bridgeModeBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">Simulator + APK Bridge</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">
+              Termux APK इंस्टॉल करने पर `AravAccessibilityService` आपके फोन की स्क्रीन रीड करता है और ऑटो-टच करता है:
+            </p>
+
+            <!-- Touch Coordinate & Action Controls -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <button onclick="triggerScreenAction('READ_SCREEN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                👁️ Read Screen
+              </button>
+              <button onclick="triggerScreenAction('GLOBAL_HOME')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                🏠 Home Page
+              </button>
+              <button onclick="triggerScreenAction('GLOBAL_BACK')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                🔙 Back Action
+              </button>
+              <button onclick="triggerScreenAction('SCROLL_DOWN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                ⏬ Scroll Down
+              </button>
+            </div>
+
+            <!-- Coordinate Tap Simulator -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-3">
+              <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
+                <span class="font-semibold">👆 Auto-Touch Coordinate Dispatch:</span>
+                <span id="coordReadout" class="mono text-cyan-300">X: 540, Y: 960</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 items-center">
+                <input id="touchXInput" type="number" value="540" min="0" max="1440" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="X (px)" />
+                <input id="touchYInput" type="number" value="960" min="0" max="3200" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="Y (px)" />
+                <button onclick="dispatchCoordinateTouch()" class="py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
+                  Tap Screen
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accessibility Telemetry Log -->
+          <div>
+            <di
