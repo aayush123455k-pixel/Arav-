@@ -1,331 +1,245 @@
-<!DOCTYPE html>
-<html lang="hi" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ARAV AI — Personal Jarvis Android &amp; Web Assistant</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --cyan-glow: rgba(6, 182, 212, 0.45);
-      --blue-glow: rgba(59, 130, 246, 0.35);
-    }
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: radial-gradient(circle at 50% 15%, #0c192c 0%, #050b14 60%, #02050a 100%);
-      color: #e2e8f0;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-    .mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
-    @keyframes spinSlow {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    @keyframes spinReverse {
-      from { transform: rotate(360deg); }
-      to { transform: rotate(0deg); }
-    }
-    @keyframes pulseCore {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 28px var(--cyan-glow), inset 0 0 18px var(--cyan-glow); }
-      50% { transform: scale(1.06); box-shadow: 0 0 48px rgba(34, 211, 238, 0.75), inset 0 0 28px rgba(34, 211, 238, 0.65); }
-    }
-    .ring-spin {
-      animation: spinSlow 18s linear infinite;
-    }
-    .ring-spin-rev {
-      animation: spinReverse 12s linear infinite;
-    }
-    .core-pulse {
-      animation: pulseCore 2.6s ease-in-out infinite;
-    }
-    .listening-active {
-      animation: pulseCore 0.9s ease-in-out infinite !important;
-      border-color: #22d3ee !important;
-      box-shadow: 0 0 60px rgba(34, 211, 238, 0.95), inset 0 0 30px rgba(6, 182, 212, 0.8) !important;
-    }
-    .hud-card {
-      background: rgba(15, 23, 42, 0.78);
-      border: 1px solid rgba(56, 189, 248, 0.22);
-      backdrop-filter: blur(12px);
-    }
-    .hud-card-active {
-      border-color: rgba(34, 211, 238, 0.65);
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.6);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(56, 189, 248, 0.35);
-      border-radius: 9999px;
-    }
-  </style>
-</head>
-<body class="flex flex-col min-h-screen selection:bg-cyan-500 selection:text-slate-950">
+name: Build Arav AI Android APK
 
-  <!-- Top Jarvis Status Header -->
-  <header class="sticky top-0 z-30 border-b border-cyan-500/25 bg-slate-950/90 backdrop-blur-md px-3 sm:px-5 py-2.5">
-    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
-        <div class="relative w-9 h-9 rounded-full bg-cyan-500/15 border border-cyan-400/60 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-          <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping absolute"></span>
-          <span class="w-3.5 h-3.5 rounded-full bg-cyan-300 relative"></span>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base sm:text-lg font-extrabold tracking-wider text-cyan-300">ARAV AI</h1>
-            <span class="text-[10px] mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">JARVIS OS v3.0</span>
-          </div>
-          <p id="headerStatusText" class="text-[11px] text-slate-400">System Online • Brain: Built-in + Gemini API</p>
-        </div>
-      </div>
+on:
+  push:
+  workflow_dispatch:
 
-      <!-- Action Controls -->
-      <div class="flex items-center gap-1.5 sm:gap-2">
-        <button id="btnToggleVoice" onclick="toggleVoiceOutput()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 border border-cyan-400/30 flex items-center gap-1.5 transition">
-          <span id="voiceIcon">🔊</span>
-          <span id="voiceLabel" class="hidden sm:inline">Voice: ON</span>
-        </button>
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-        <button id="btnToggleLang" onclick="toggleRecognitionLang()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600/50 transition mono">
-          <span id="langBadge">HI-IN</span>
-        </button>
-
-        <button id="btnOpenKeyModal" onclick="openApiKeyModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 flex items-center gap-1.5 transition">
-          <span>🔑</span>
-          <span id="apiKeyStatusBadge">API Key</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="max-w-6xl mx-auto mt-2.5 grid grid-cols-4 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-      <button id="tabBtnHud" onclick="switchTab('hud')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 shadow">
-        <span>🎙️</span>
-        <span>Arav HUD</span>
-      </button>
-      <button id="tabBtnControl" onclick="switchTab('control')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
-        <span>📱</span>
-        <span>App &amp; Screen</span>
-      </button>
-      <button id="tabBtnCode" onclick="switchTab('code')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
-        <span>💻</span>
-        <span>Code Studio</span>
-      </button>
-      <button id="tabBtnTermux" onclick="switchTab('termux')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
-        <span>📦</span>
-        <span>Termux APK</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Main Workspace -->
-  <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
-
-    <!-- TAB 1: ARAV JARVIS HUD & VOICE ASSISTANT -->
-    <section id="viewHud" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-      <!-- Left Column: Jarvis Core & Voice Controls -->
-      <div class="lg:col-span-5 hud-card rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-between relative overflow-hidden">
-        <div class="w-full flex items-center justify-between text-xs text-cyan-300/80 mono mb-2">
-          <span>CORE: ARAV-MK3</span>
-          <span id="clockReadout">12:00:00</span>
-        </div>
-
-        <!-- Animated Jarvis Arc Reactor & Mic Button -->
-        <div class="my-4 relative flex items-center justify-center w-52 h-52 sm:w-60 sm:h-60">
-          <!-- Outer Dashed Ring -->
-          <div class="absolute inset-0 rounded-full border-2 border-dashed border-cyan-400/35 ring-spin"></div>
-          <!-- Middle Tech Ring -->
-          <div class="absolute inset-4 rounded-full border border-cyan-300/30 border-t-cyan-400 border-b-blue-500 ring-spin-rev"></div>
-          <!-- Inner Glow Ring -->
-          <div class="absolute inset-9 rounded-full bg-cyan-500/10 border border-cyan-400/40"></div>
-
-          <!-- Center Interactive Mic Button -->
-          <button id="btnArcMic" onclick="toggleMicListening()" class="relative z-10 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-b from-cyan-950 via-slate-900 to-slate-950 border-2 border-cyan-400/80 core-pulse flex flex-col items-center justify-center text-center p-3 cursor-pointer transition group">
-            <span id="micCenterIcon" class="text-3xl sm:text-4xl mb-1 group-hover:scale-110 transition">🎙️</span>
-            <span class="text-xs font-extrabold tracking-widest text-cyan-200 uppercase">ARAV AI</span>
-            <span id="micStatusSub" class="text-[10px] text-cyan-300/80 mono mt-0.5">Tap to Speak</span>
-          </button>
-        </div>
-
-        <!-- Live Voice Transcript / Wave Status -->
-        <div class="w-full bg-slate-950/80 border border-cyan-500/25 rounded-xl p-3 text-center mb-3">
-          <div class="text-[11px] uppercase tracking-wider text-cyan-400 font-semibold mb-1" id="liveStateTitle">Ready for Command, Boss</div>
-          <p id="liveTranscriptPreview" class="text-xs text-slate-300 italic min-h-[1.25rem]">"हेलो आरव, मेरे लिए YouTube ओपन कर दो" या नीचे से कमांड चुनें</p>
-        </div>
-
-        <!-- Quick Demo Voice Commands (Directly from Video Scenarios) -->
-        <div class="w-full">
-          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">⚡ Video Demo Voice Commands (1-Tap Test):</p>
-          <div class="grid grid-cols-2 gap-1.5">
-            <button onclick="runPresetCommand('हेलो आरव, अपना परिचय दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              👋 "हेलो आरव, परिचय दो"
-            </button>
-            <button onclick="runPresetCommand('आरव, मेरे लिए YouTube ओपन कर दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              ▶️ "YouTube ओपन कर दो"
-            </button>
-            <button onclick="runPresetCommand('एक कोड ओपन करके कैलकुलेटर का HTML में कोड लिखो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              🧮 "कैलकुलेटर का HTML कोड लिखो"
-            </button>
-            <button onclick="runPresetCommand('YouTube पर STUDIO OF CODING AI चैनल सर्च करो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              🔍 "YouTube चैनल सर्च करो"
-            </button>
-            <button onclick="runPresetCommand('ChatGPT पर जाने के लिए एक इमेज का प्रॉम्प्ट लिख दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              🎨 "इमेज का प्रॉम्प्ट लिख दो"
-            </button>
-            <button onclick="runPresetCommand('स्क्रीन रीड करो और होम पेज पर आ जाओ')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
-              📲 "स्क्रीन रीड और होम पेज"
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column: Live Conversation & Command Terminal -->
-      <div class="lg:col-span-7 hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[440px]">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
-          <div>
-            <h2 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
-              <span>💬</span>
-              <span>Arav Neural Command Log</span>
-            </h2>
-            <p class="text-[11px] text-slate-400">Hindi, Hinglish &amp; English Voice/Text Commands</p>
-          </div>
-          <button onclick="clearChatHistory()" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-            🧹 Clear Log
-          </button>
-        </div>
-
-        <!-- Messages Feed -->
-        <div id="chatMessagesContainer" class="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[340px] sm:max-h-[380px]"></div>
-
-        <!-- Input Bar -->
-        <form id="chatForm" onsubmit="handleChatSubmit(event)" class="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
-          <button type="button" onclick="toggleMicListening()" class="p-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 transition" title="Voice Input">
-            🎙️
-          </button>
-          <input
-            id="chatInputBox"
-            type="text"
-            placeholder="आरव को कमांड दें (जैसे: 'YouTube ओपन करो', 'कैलकुलेटर का कोड लिखो')..."
-            class="flex-1 bg-slate-900/95 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition"
-          />
-          <button type="submit" class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-lg shadow-cyan-500/20">
-            Send ➤
-          </button>
-        </form>
-      </div>
-    </section>
-
-    <!-- TAB 2: PHONE CONTROL, APP OPENER & ACCESSIBILITY SCREEN CONTROLLER -->
-    <section id="viewControl" class="hidden space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- App Launcher & Intent Controller -->
-        <div class="hud-card rounded-2xl p-4 sm:p-5">
-          <h2 class="text-sm sm:text-base font-bold text-cyan-300 mb-1 flex items-center gap-2">
-            <span>🚀</span>
-            <span>Arav App Launcher &amp; Deep-Link Intents</span>
-          </h2>
-          <p class="text-xs text-slate-400 mb-4">
-            वीडियो में बताए अनुसार फोन के ऐप्स सीधे खोलें या YouTube पर कोई भी चैनल/गाना सर्च करें:
-          </p>
-
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
-            <button onclick="launchExternalApp('youtube', 'https://m.youtube.com')" class="p-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">▶️</span>
-              <span class="text-xs font-semibold text-red-200">YouTube खोलें</span>
-            </button>
-            <button onclick="launchExternalApp('whatsapp', 'https://wa.me/')" class="p-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">💬</span>
-              <span class="text-xs font-semibold text-emerald-200">WhatsApp</span>
-            </button>
-            <button onclick="launchExternalApp('chatgpt', 'https://chatgpt.com/')" class="p-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">🤖</span>
-              <span class="text-xs font-semibold text-teal-200">ChatGPT</span>
-            </button>
-            <button onclick="launchExternalApp('instagram', 'https://www.instagram.com/')" class="p-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">📸</span>
-              <span class="text-xs font-semibold text-pink-200">Instagram</span>
-            </button>
-            <button onclick="launchExternalApp('telegram', 'https://web.telegram.org/')" class="p-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">✈️</span>
-              <span class="text-xs font-semibold text-sky-200">Telegram</span>
-            </button>
-            <button onclick="launchExternalApp('aistudio', 'https://aistudio.google.com/app/apikey')" class="p-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 flex flex-col items-center gap-1 transition">
-              <span class="text-2xl">🔑</span>
-              <span class="text-xs font-semibold text-amber-200">Google AI Key</span>
-            </button>
-          </div>
-
-          <!-- Direct YouTube Search & Song Player -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
-            <label for="ytSearchInput" class="block text-xs font-semibold text-slate-300 mb-1.5">
-              🎵 YouTube पर गाना या चैनल सर्च करके ओपन करें:
-            </label>
-            <div class="flex gap-2">
-              <input id="ytSearchInput" type="text" value="STUDIO OF CODING AI" placeholder="गाने या चैनल का नाम लिखें..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-cyan-400" />
-              <button onclick="searchOnYouTubeNow()" class="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs transition">
-                Search &amp; Open
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Screen Reader & Touch Automation Controller -->
-        <div class="hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <h2 class="text-sm sm:text-base font-bold text-cyan-300 flex items-center gap-2">
-                <span>📲</span>
-                <span>Accessibility Screen Reader &amp; Auto-Touch</span>
-              </h2>
-              <span id="bridgeModeBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">Simulator + APK Bridge</span>
-            </div>
-            <p class="text-xs text-slate-400 mb-3">
-              Termux APK इंस्टॉल करने पर `AravAccessibilityService` आपके फोन की स्क्रीन रीड करता है और ऑटो-टच करता है:
-            </p>
-
-            <!-- Touch Coordinate & Action Controls -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-              <button onclick="triggerScreenAction('READ_SCREEN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
-                👁️ Read Screen
-              </button>
-              <button onclick="triggerScreenAction('GLOBAL_HOME')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
-                🏠 Home Page
-              </button>
-              <button onclick="triggerScreenAction('GLOBAL_BACK')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
-                🔙 Back Action
-              </button>
-              <button onclick="triggerScreenAction('SCROLL_DOWN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
-                ⏬ Scroll Down
-              </button>
-            </div>
-
-            <!-- Coordinate Tap Simulator -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-3">
-              <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
-                <span class="font-semibold">👆 Auto-Touch Coordinate Dispatch:</span>
-                <span id="coordReadout" class="mono text-cyan-300">X: 540, Y: 960</span>
-              </div>
-              <div class="grid grid-cols-3 gap-2 items-center">
-                <input id="touchXInput" type="number" value="540" min="0" max="1440" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="X (px)" />
-                <input id="touchYInput" type="number" value="960" min="0" max="3200" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="Y (px)" />
-                <button onclick="dispatchCoordinateTouch()" class="py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
-                  Tap Screen
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Accessibility Telemetry Log -->
-          <div>
-            <di
+      - name: Extract Arav AI Project and Build Signed APK
+        run: |
+          cat << 'B64_EOF' > project.b64
+          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
+          V+TM+lgjfJ87hlliMql+qdenHilUOU3MQQ
