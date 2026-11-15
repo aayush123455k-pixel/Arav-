@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ARAV AI — Personal Jarvis Android &amp; Web Assistant</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cyan-glow: rgba(6, 182, 212, 0.45);
+      --blue-glow: rgba(59, 130, 246, 0.35);
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 50% 15%, #0c192c 0%, #050b14 60%, #02050a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes pulseCore {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 28px var(--cyan-glow), inset 0 0 18px var(--cyan-glow); }
+      50% { transform: scale(1.06); box-shadow: 0 0 48px rgba(34, 211, 238, 0.75), inset 0 0 28px rgba(34, 211, 238, 0.65); }
+    }
+    .ring-spin {
+      animation: spinSlow 18s linear infinite;
+    }
+    .ring-spin-rev {
+      animation: spinReverse 12s linear infinite;
+    }
+    .core-pulse {
+      animation: pulseCore 2.6s ease-in-out infinite;
+    }
+    .listening-active {
+      animation: pulseCore 0.9s ease-in-out infinite !important;
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 60px rgba(34, 211, 238, 0.95), inset 0 0 30px rgba(6, 182, 212, 0.8) !important;
+    }
+    .hud-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .hud-card-active {
+      border-color: rgba(34, 211, 238, 0.65);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- Top Jarvis Status Header -->
+  <header class="sticky top-0 z-30 border-b border-cyan-500/25 bg-slate-950/90 backdrop-blur-md px-3 sm:px-5 py-2.5">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="relative w-9 h-9 rounded-full bg-cyan-500/15 border border-cyan-400/60 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping absolute"></span>
+          <span class="w-3.5 h-3.5 rounded-full bg-cyan-300 relative"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-extrabold tracking-wider text-cyan-300">ARAV AI</h1>
+            <span class="text-[10px] mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">JARVIS OS v3.0</span>
+          </div>
+          <p id="headerStatusText" class="text-[11px] text-slate-400">System Online • Brain: Built-in + Gemini API</p>
+        </div>
+      </div>
+
+      <!-- Action Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button id="btnToggleVoice" onclick="toggleVoiceOutput()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 border border-cyan-400/30 flex items-center gap-1.5 transition">
+          <span id="voiceIcon">🔊</span>
+          <span id="voiceLabel" class="hidden sm:inline">Voice: ON</span>
+        </button>
+
+        <button id="btnToggleLang" onclick="toggleRecognitionLang()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600/50 transition mono">
+          <span id="langBadge">HI-IN</span>
+        </button>
+
+        <button id="btnOpenKeyModal" onclick="openApiKeyModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 flex items-center gap-1.5 transition">
+          <span>🔑</span>
+          <span id="apiKeyStatusBadge">API Key</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-6xl mx-auto mt-2.5 grid grid-cols-4 gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+      <button id="tabBtnHud" onclick="switchTab('hud')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 shadow">
+        <span>🎙️</span>
+        <span>Arav HUD</span>
+      </button>
+      <button id="tabBtnControl" onclick="switchTab('control')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>📱</span>
+        <span>App &amp; Screen</span>
+      </button>
+      <button id="tabBtnCode" onclick="switchTab('code')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>💻</span>
+        <span>Code Studio</span>
+      </button>
+      <button id="tabBtnTermux" onclick="switchTab('termux')" class="py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300">
+        <span>📦</span>
+        <span>Termux APK</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
+
+    <!-- TAB 1: ARAV JARVIS HUD & VOICE ASSISTANT -->
+    <section id="viewHud" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <!-- Left Column: Jarvis Core & Voice Controls -->
+      <div class="lg:col-span-5 hud-card rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-between relative overflow-hidden">
+        <div class="w-full flex items-center justify-between text-xs text-cyan-300/80 mono mb-2">
+          <span>CORE: ARAV-MK3</span>
+          <span id="clockReadout">12:00:00</span>
+        </div>
+
+        <!-- Animated Jarvis Arc Reactor & Mic Button -->
+        <div class="my-4 relative flex items-center justify-center w-52 h-52 sm:w-60 sm:h-60">
+          <!-- Outer Dashed Ring -->
+          <div class="absolute inset-0 rounded-full border-2 border-dashed border-cyan-400/35 ring-spin"></div>
+          <!-- Middle Tech Ring -->
+          <div class="absolute inset-4 rounded-full border border-cyan-300/30 border-t-cyan-400 border-b-blue-500 ring-spin-rev"></div>
+          <!-- Inner Glow Ring -->
+          <div class="absolute inset-9 rounded-full bg-cyan-500/10 border border-cyan-400/40"></div>
+
+          <!-- Center Interactive Mic Button -->
+          <button id="btnArcMic" onclick="toggleMicListening()" class="relative z-10 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-b from-cyan-950 via-slate-900 to-slate-950 border-2 border-cyan-400/80 core-pulse flex flex-col items-center justify-center text-center p-3 cursor-pointer transition group">
+            <span id="micCenterIcon" class="text-3xl sm:text-4xl mb-1 group-hover:scale-110 transition">🎙️</span>
+            <span class="text-xs font-extrabold tracking-widest text-cyan-200 uppercase">ARAV AI</span>
+            <span id="micStatusSub" class="text-[10px] text-cyan-300/80 mono mt-0.5">Tap to Speak</span>
+          </button>
+        </div>
+
+        <!-- Live Voice Transcript / Wave Status -->
+        <div class="w-full bg-slate-950/80 border border-cyan-500/25 rounded-xl p-3 text-center mb-3">
+          <div class="text-[11px] uppercase tracking-wider text-cyan-400 font-semibold mb-1" id="liveStateTitle">Ready for Command, Boss</div>
+          <p id="liveTranscriptPreview" class="text-xs text-slate-300 italic min-h-[1.25rem]">"हेलो आरव, मेरे लिए YouTube ओपन कर दो" या नीचे से कमांड चुनें</p>
+        </div>
+
+        <!-- Quick Demo Voice Commands (Directly from Video Scenarios) -->
+        <div class="w-full">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">⚡ Video Demo Voice Commands (1-Tap Test):</p>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="runPresetCommand('हेलो आरव, अपना परिचय दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              👋 "हेलो आरव, परिचय दो"
+            </button>
+            <button onclick="runPresetCommand('आरव, मेरे लिए YouTube ओपन कर दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              ▶️ "YouTube ओपन कर दो"
+            </button>
+            <button onclick="runPresetCommand('एक कोड ओपन करके कैलकुलेटर का HTML में कोड लिखो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🧮 "कैलकुलेटर का HTML कोड लिखो"
+            </button>
+            <button onclick="runPresetCommand('YouTube पर STUDIO OF CODING AI चैनल सर्च करो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🔍 "YouTube चैनल सर्च करो"
+            </button>
+            <button onclick="runPresetCommand('ChatGPT पर जाने के लिए एक इमेज का प्रॉम्प्ट लिख दो')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              🎨 "इमेज का प्रॉम्प्ट लिख दो"
+            </button>
+            <button onclick="runPresetCommand('स्क्रीन रीड करो और होम पेज पर आ जाओ')" class="text-left px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-cyan-950/60 border border-slate-700/70 hover:border-cyan-400/50 text-xs text-slate-200 transition">
+              📲 "स्क्रीन रीड और होम पेज"
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Conversation & Command Terminal -->
+      <div class="lg:col-span-7 hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[440px]">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
+              <span>💬</span>
+              <span>Arav Neural Command Log</span>
+            </h2>
+            <p class="text-[11px] text-slate-400">Hindi, Hinglish &amp; English Voice/Text Commands</p>
+          </div>
+          <button onclick="clearChatHistory()" class="px-2.5 py-1 rounded-lg text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            🧹 Clear Log
+          </button>
+        </div>
+
+        <!-- Messages Feed -->
+        <div id="chatMessagesContainer" class="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[340px] sm:max-h-[380px]"></div>
+
+        <!-- Input Bar -->
+        <form id="chatForm" onsubmit="handleChatSubmit(event)" class="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
+          <button type="button" onclick="toggleMicListening()" class="p-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 transition" title="Voice Input">
+            🎙️
+          </button>
+          <input
+            id="chatInputBox"
+            type="text"
+            placeholder="आरव को कमांड दें (जैसे: 'YouTube ओपन करो', 'कैलकुलेटर का कोड लिखो')..."
+            class="flex-1 bg-slate-900/95 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition"
+          />
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-lg shadow-cyan-500/20">
+            Send ➤
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 2: PHONE CONTROL, APP OPENER & ACCESSIBILITY SCREEN CONTROLLER -->
+    <section id="viewControl" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- App Launcher & Intent Controller -->
+        <div class="hud-card rounded-2xl p-4 sm:p-5">
+          <h2 class="text-sm sm:text-base font-bold text-cyan-300 mb-1 flex items-center gap-2">
+            <span>🚀</span>
+            <span>Arav App Launcher &amp; Deep-Link Intents</span>
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">
+            वीडियो में बताए अनुसार फोन के ऐप्स सीधे खोलें या YouTube पर कोई भी चैनल/गाना सर्च करें:
+          </p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+            <button onclick="launchExternalApp('youtube', 'https://m.youtube.com')" class="p-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">▶️</span>
+              <span class="text-xs font-semibold text-red-200">YouTube खोलें</span>
+            </button>
+            <button onclick="launchExternalApp('whatsapp', 'https://wa.me/')" class="p-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">💬</span>
+              <span class="text-xs font-semibold text-emerald-200">WhatsApp</span>
+            </button>
+            <button onclick="launchExternalApp('chatgpt', 'https://chatgpt.com/')" class="p-3 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">🤖</span>
+              <span class="text-xs font-semibold text-teal-200">ChatGPT</span>
+            </button>
+            <button onclick="launchExternalApp('instagram', 'https://www.instagram.com/')" class="p-3 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">📸</span>
+              <span class="text-xs font-semibold text-pink-200">Instagram</span>
+            </button>
+            <button onclick="launchExternalApp('telegram', 'https://web.telegram.org/')" class="p-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">✈️</span>
+              <span class="text-xs font-semibold text-sky-200">Telegram</span>
+            </button>
+            <button onclick="launchExternalApp('aistudio', 'https://aistudio.google.com/app/apikey')" class="p-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 flex flex-col items-center gap-1 transition">
+              <span class="text-2xl">🔑</span>
+              <span class="text-xs font-semibold text-amber-200">Google AI Key</span>
+            </button>
+          </div>
+
+          <!-- Direct YouTube Search & Song Player -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <label for="ytSearchInput" class="block text-xs font-semibold text-slate-300 mb-1.5">
+              🎵 YouTube पर गाना या चैनल सर्च करके ओपन करें:
+            </label>
+            <div class="flex gap-2">
+              <input id="ytSearchInput" type="text" value="STUDIO OF CODING AI" placeholder="गाने या चैनल का नाम लिखें..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-cyan-400" />
+              <button onclick="searchOnYouTubeNow()" class="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs transition">
+                Search &amp; Open
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen Reader & Touch Automation Controller -->
+        <div class="hud-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-sm sm:text-base font-bold text-cyan-300 flex items-center gap-2">
+                <span>📲</span>
+                <span>Accessibility Screen Reader &amp; Auto-Touch</span>
+              </h2>
+              <span id="bridgeModeBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">Simulator + APK Bridge</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">
+              Termux APK इंस्टॉल करने पर `AravAccessibilityService` आपके फोन की स्क्रीन रीड करता है और ऑटो-टच करता है:
+            </p>
+
+            <!-- Touch Coordinate & Action Controls -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <button onclick="triggerScreenAction('READ_SCREEN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                👁️ Read Screen
+              </button>
+              <button onclick="triggerScreenAction('GLOBAL_HOME')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                🏠 Home Page
+              </button>
+              <button onclick="triggerScreenAction('GLOBAL_BACK')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                🔙 Back Action
+              </button>
+              <button onclick="triggerScreenAction('SCROLL_DOWN')" class="p-2.5 rounded-xl bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-400/50 text-xs font-medium text-cyan-200 transition">
+                ⏬ Scroll Down
+              </button>
+            </div>
+
+            <!-- Coordinate Tap Simulator -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 mb-3">
+              <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
+                <span class="font-semibold">👆 Auto-Touch Coordinate Dispatch:</span>
+                <span id="coordReadout" class="mono text-cyan-300">X: 540, Y: 960</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 items-center">
+                <input id="touchXInput" type="number" value="540" min="0" max="1440" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="X (px)" />
+                <input id="touchYInput" type="number" value="960" min="0" max="3200" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs mono text-slate-100" placeholder="Y (px)" />
+                <button onclick="dispatchCoordinateTouch()" class="py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
+                  Tap Screen
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accessibility Telemetry Log -->
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Accessibility Service Telemetry:</div>
+            <div id="screenLogBox" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 h-32 overflow-y-auto mono text-[11px] space-y-1 text-cyan-200/90"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: IN-APP CODE STUDIO & LIVE RUNNER (Video [00:11:13]) -->
+    <section id="viewCode" class="hidden space-y-4">
+      <div class="hud-card rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-cyan-300 flex items-center gap-2">
+              <span>💻</span>
+              <span>Arav Live Code Studio (HTML / JS / Python Generator)</span>
+            </h2>
+            <p class="text-xs text-slate-400">
+              वीडियो में 11:13 पर दिखाए अनुसार आरव से कोई भी ऐप/कैलकुलेटर कोड लिखवाएं और यहीं **Run Preview** करके चलाएं:
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="loadCodeTemplate('calculator')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-400/30 transition">
+              🧮 Calculator App (Video Demo)
+            </button>
+            <button onclick="loadCodeTemplate('tictactoe')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              🎮 Tic-Tac-Toe Game
+            </button>
+            <button onclick="loadCodeTemplate('python_jarvis')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              🐍 Python Jarvis Script
+            </button>
+          </div>
+        </div>
+
+        <!-- Prompt to Code Generator Bar -->
+        <div class="flex flex-col sm:flex-row gap-2 mb-4">
+          <input id="codePromptInput" type="text" placeholder="आरव को कोडिंग टास्क दें (जैसे: 'HTML में एक कैलकुलेटर ऐप बनाओ' या 'Digital Clock बनाओ')..." class="flex-1 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-100 outline-none" />
+          <div class="flex gap-2">
+            <button onclick="generateCodeWithArav()" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm transition whitespace-nowrap">
+              ⚡ Generate Code
+            </button>
+            <button onclick="runLiveCodePreview()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition whitespace-nowrap">
+              ▶ Run Code
+            </button>
+            <button onclick="copyEditorCode()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+              📋 Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Split Editor & Live Preview -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between bg-slate-900 px-3 py-1.5 rounded-t-xl border border-b-0 border-slate-800 text-xs">
+              <span id="codeFileName" class="mono text-cyan-300 font-semibold">calculator.html</span>
+              <span id="codeStatusBadge" class="text-[11px] text-emerald-400">● Ready to Run</span>
+            </div>
+            <textarea id="codeEditorArea" rows="16" class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-b-xl p-3 mono text-xs text-cyan-100 focus:border-cyan-500 outline-none resize-none"></textarea>
+          </div>
+
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between bg-slate-900 px-3 py-1.5 rounded-t-xl border border-b-0 border-slate-800 text-xs">
+              <span class="font-semibold text-slate-200">📱 Live App Preview Output</span>
+              <button onclick="runLiveCodePreview()" class="text-[11px] text-cyan-300 hover:underline">↻ Refresh Preview</button>
+            </div>
+            <div class="flex-1 bg-slate-950 border border-slate-800 rounded-b-xl overflow-hidden min-h-[340px]">
+              <iframe id="codePreviewFrame" title="Live Code Output" class="w-full h-[350px] border-0 bg-slate-900"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 3-LEVEL TERMUX APK BUILDER & MASTER PROMPT (Video [00:00:20] - [00:08:55]) -->
+    <section id="viewTermux" class="hidden space-y-4">
+      <div class="hud-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="border-b border-slate-800 pb-3">
+          <span class="text-[11px] mono uppercase px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">STUDIO OF CODING AI — 3-Level Workflow</span>
+          <h2 class="text-base sm:text-lg font-bold text-cyan-200 mt-1.5">
+            📦 अपने फोन में Termux से <span class="text-cyan-400">Arav-AI.apk</span> कैसे बिल्ड करें (Step-by-Step)
+          </h2>
+          <p class="text-xs text-slate-300 mt-1">
+            वीडियो में बताए गए तीनों लेवल (Level 1: ChatGPT/Claude Master Prompt, Level 2: Project ZIP, और Level 3: Termux Step 1-2-3 Commands) नीचे **Arav AI** नाम के साथ तैयार हैं।
+          </p>
+        </div>
+
+        <!-- Level 1: 11-Task Master Prompt -->
+        <div class="bg-slate-900/90 border border-cyan-500/25 rounded-xl p-3.5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div>
+              <h3 class="text-xs sm:text-sm font-bold text-cyan-300">Level 1: 11-Task Master Prompt (Arav AI — Jarvis Style)</h3>
+              <p class="text-[11px] text-slate-400">अगर आप Claude AI या ChatGPT से नया कोड जनरेट करवाना चाहें तो यह प्रॉम्प्ट कॉपी करें:</p>
+            </div>
+            <button onclick="copyTextById('masterPromptText', 'Master Prompt कॉपी हो गया!')" class="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
+              📋 Copy Master Prompt
+            </button>
+          </div>
+          <pre id="masterPromptText" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-[11px] mono text-slate-300 overflow-x-auto whitespace-pre-wrap max-h-48">Project Name: ARAV AI (Personal Jarvis Style Android Assistant App)
+Brain: Google Gemini API (gemini-2.5-flash / gemini-1.5-flash) with in-app API Key input + "Get Free API Key" link (https://aistudio.google.com/app/apikey).
+Persona: Smart, loyal male Jarvis-style AI assistant named "Arav" (आरव) who speaks politely in Hindi, Hinglish, and English, addressing the user as "Boss" or "Sir".
+
+Build the complete Android Project in a ZIP file that compiles directly inside Termux on an Android phone without a PC. Include these 11 Tasks:
+1. Futuristic Jarvis Arc Reactor HUD UI with animated rings, status indicators, and dark cyan neon theme.
+2. Gemini API Key Manager screen with local storage save and direct Google AI Studio redirect button.
+3. Real-time Hindi/English Voice Recognition (SpeechRecognizer / WebSpeech) & Natural Voice Reply (TextToSpeech).
+4. App Opener Engine: Open YouTube, WhatsApp, Instagram, Telegram, Chrome, and ChatGPT by voice command.
+5. YouTube Automation: Search any YouTube channel (e.g., STUDIO OF CODING AI) or play songs directly via Intent.
+6. Android AccessibilityService (AravAccessibilityService): Read screen text nodes, perform coordinate tap/touch, Home, Back, and Scroll gestures.
+7. In-App Live Code Studio: Generate HTML/CSS/JS (e.g., Calculator app) or Python code by voice command, clean editor, and run live preview inside the app.
+8. AI Image Prompt Generator: Write detailed image generation prompts and open ChatGPT to render them.
+9. Offline Fallback Brain so basic Hindi/English commands work even before entering an API key.
+10. Full AndroidManifest.xml with RECORD_AUDIO, INTERNET, QUERY_ALL_PACKAGES, and BIND_ACCESSIBILITY_SERVICE permissions.
+11. Termux 3-Step automated build script (step1, step2, step3) that outputs signed Arav-AI.apk directly into /sdcard/Download/Arav-AI.apk.</pre>
+        </div>
+
+        <!-- Level 3: Step 1, Step 2, Step 3 Termux Commands -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- Step 1 -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-emerald-400 mono">STEP 1: Storage Permission</span>
+                <button onclick="copyTextById('termuxStep1', 'Step 1 कमांड कॉपी हो गया!')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">📋 Copy</button>
+              </div>
+              <p class="text-[11px] text-slate-400 mb-2">Termux ओपन करके सबसे पहले फाइल परमिशन दें (Allow पर टैप करें):</p>
+              <pre id="termuxStep1" class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-[11px] mono text-emerald-300 overflow-x-auto">termux-setup-storage && yes | pkg update -y</pre>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">वीडियो टाइमस्टैम्प: [00:05:38] – [00:06:38]</p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-amber-400 mono">STEP 2: Install Build Tools</span>
+                <button onclick="copyTextById('termuxStep2', 'Step 2 कमांड कॉपी हो गया!')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">📋 Copy</button>
+              </div>
+              <p class="text-[11px] text-slate-400 mb-2">Java, Android SDK tools (`aapt`, `dx`, `apksigner`) और `unzip` इंस्टॉल करें (रुके तो `y` दबाकर Enter करें):</p>
+              <pre id="termuxStep2" class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-[11px] mono text-amber-300 overflow-x-auto">yes | pkg install -y openjdk-17 aapt aapt2 dx apksigner ecj unzip wget</pre>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">वीडियो टाइमस्टैम्प: [00:06:44] – [00:07:25]</p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-cyan-400 mono">STEP 3: Build Arav-AI.apk</span>
+                <button onclick="copyTextById('termuxStep3', 'Step 3 कमांड कॉपी हो गया!')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">📋 Copy</button>
+              </div>
+              <p class="text-[11px] text-slate-400 mb-2">ZIP फाइल को Download फोल्डर में रखकर यह कमांड चलाएं — आपका `Arav-AI.apk` Download फोल्डर में बन जाएगा:</p>
+              <pre id="termuxStep3" class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-[11px] mono text-cyan-300 overflow-x-auto">cd ~/storage/downloads && unzip -o arav_jarvis_android_project.zip -d arav_ai_build && cd arav_ai_build && bash step3_build_apk.sh</pre>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">वीडियो टाइमस्टैम्प: [00:07:31] – [00:08:58]</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- GEMINI API KEY MODAL (Video [00:09:45] - [00:10:18]) -->
+  <div id="apiKeyModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="hud-card rounded-2xl max-w-md w-full p-5 border border-cyan-400/50 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔑</span>
+          <h3 class="text-sm sm:text-base font-bold text-cyan-300">Arav AI — Gemini API Key Setup</h3>
+        </div>
+        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-white text-sm px-2 py-0.5 rounded">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+        वीडियो में बताए अनुसार (09:49 पर), **Get Free API Key** पर टैप करके Google AI Studio से अपनी फ्री Gemini API Key कॉपी करें और नीचे पेस्ट करें:
+      </p>
+
+      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="w-full mb-3 py-2.5 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition">
+        <span>🌐 Get Free Gemini API Key (Google AI Studio)</span>
+        <span>↗</span>
+      </a>
+
+      <div class="space-y-3">
+        <div>
+          <label for="geminiKeyInput" class="block text-xs font-semibold text-slate-300 mb-1">Paste Gemini API Key:</label>
+          <input id="geminiKeyInput" type="password" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs mono text-slate-100 outline-none" />
+        </div>
+
+        <div>
+          <label for="geminiModelSelect" class="block text-xs font-semibold text-slate-300 mb-1">Select Gemini Brain Model:</label>
+          <select id="geminiModelSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none">
+            <option value="gemini-2.5-flash">gemini-2.5-flash (Fastest &amp; Smart)</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash (Compatible)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="clearSavedApiKey()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">
+            Clear Key
+          </button>
+          <button type="button" onclick="saveApiKeySettings()" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs">
+            💾 Save &amp; Activate Brain
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastBanner" class="fixed bottom-4 right-4 z-50 hidden px-4 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs shadow-xl transition"></div>
+
+  <script>
+    // =========================================================================
+    // ARAV AI (JARVIS OS) — STATE & INITIALIZATION
+    // =========================================================================
+    const CODE_TEMPLATES = {
+      calculator: {
+        filename: 'calculator.html',
+        code: `<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #060d1a; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .calc { width: 290px; background: #0f172a; border: 1px solid #22d3ee55; border-radius: 18px; padding: 16px; box-shadow: 0 0 30px #06b6d433; }
+  .title { font-size: 12px; color: #22d3ee; text-align: center; letter-spacing: 1.5px; margin-bottom: 8px; font-weight: 700; }
+  .screen { width: 100%; height: 54px; background: #020617; border: 1px solid #1e293b; border-radius: 10px; color: #67e8f9; font-size: 24px; text-align: right; padding: 10px; box-sizing: border-box; margin-bottom: 12px; font-family: monospace; overflow: hidden; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  button { height: 44px; border-radius: 10px; border: 1px solid #1e293b; background: #1e293b; color: #f8fafc; font-size: 16px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #334155; }
+  .op { background: #083344; color: #22d3ee; border-color: #06b6d466; }
+  .eq { background: #06b6d4; color: #020617; font-weight: 800; grid-column: span 2; }
+  .clr { background: #450a0a; color: #fca5a5; }
+</style>
+</head>
+<body>
+  <div class="calc">
+    <div class="title">⚡ ARAV AI CALCULATOR</div>
+    <div id="disp" class="screen">0</div>
+    <div class="grid">
+      <button class="clr" onclick="clr()">AC</button>
+      <button class="op" onclick="delChar()">⌫</button>
+      <button class="op" onclick="ins('%')">%</button>
+      <button class="op" onclick="ins('/')">÷</button>
+      <button onclick="ins('7')">7</button>
+      <button onclick="ins('8')">8</button>
+      <button onclick="ins('9')">9</button>
+      <button class="op" onclick="ins('*')">×</button>
+      <button onclick="ins('4')">4</button>
+      <button onclick="ins('5')">5</button>
+      <button onclick="ins('6')">6</button>
+      <button class="op" onclick="ins('-')">−</button>
+      <button onclick="ins('1')">1</button>
+      <button onclick="ins('2')">2</button>
+      <button onclick="ins('3')">3</button>
+      <button class="op" onclick="ins('+')">+</button>
+      <button onclick="ins('0')">0</button>
+      <button onclick="ins('.')">.</button>
+      <button class="eq" onclick="solve()">=</button>
+    </div>
+  </div>
+  <script>
+    let exp = '';
+    const d = document.getElementById('disp');
+    function ins(v) { exp += v; d.textContent = exp || '0'; }
+    function clr() { exp = ''; d.textContent = '0'; }
+    function delChar() { exp = exp.slice(0, -1); d.textContent = exp || '0'; }
+    function solve() {
+      try {
+        exp = String(Function('"use strict";return (' + exp + ')')());
+        d.textContent = exp;
+      } catch (e) { d.textContent = 'Error'; exp = ''; }
+    }
+  <\/script>
+</body>
+</html>`
+      },
+      tictactoe: {
+        filename: 'arav_tictactoe.html',
+        code: `<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; background: #060d1a; color: #67e8f9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+  h3 { margin: 0 0 10px 0; font-size: 15px; }
+  .board { display: grid; grid-template-columns: repeat(3, 76px); gap: 8px; }
+  .cell { width: 76px; height: 76px; background: #0f172a; border: 1px solid #22d3ee66; border-radius: 12px; font-size: 28px; font-weight: bold; color: #22d3ee; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  button { margin-top: 12px; padding: 6px 14px; border-radius: 8px; background: #06b6d4; color: #020617; border: 0; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h3 id="stat">⚡ Arav Tic-Tac-Toe (Turn: X)</h3>
+  <div class="board" id="b"></div>
+  <button onclick="resetG()">Restart Game</button>
+  <script>
+    let cells = Array(9).fill(''), turn = 'X', over = false;
+    function render() {
+      const b = document.getElementById('b');
+      b.innerHTML = '';
+      cells.forEach((v, i) => {
+        const c = document.createElement('div');
+        c.className = 'cell';
+        c.textContent = v;
+        c.onclick = () => move(i);
+        b.appendChild(c);
+      });
+    }
+    function move(i) {
+      if (over || cells[i]) return;
+      cells[i] = turn;
+      const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for (const [a,b,c] of wins) {
+        if (cells[a] && cells[a] === cells[b] && cells[a] === cells[c]) {
+          document.getElementById('stat').textContent = '🏆 Winner: ' + turn + '!';
+          over = true; render(); return;
+        }
+      }
+      turn = turn === 'X' ? 'O' : 'X';
+      document.getElementById('stat').textContent = 'Turn: ' + turn;
+      render();
+    }
+    function resetG() { cells = Array(9).fill(''); turn = 'X'; over = false; document.getElementById('stat').textContent = '⚡ Arav Tic-Tac-Toe (Turn: X)'; render(); }
+    render();
+  <\/script>
+</body>
+</html>`
+      },
+      python_jarvis: {
+        filename: 'arav_jarvis.py',
+        code: `# ARAV AI - Python Voice & Gemini Assistant Script (For Termux / PC)
+import os
+import json
+import urllib.request
+
+ARAV_SYSTEM_PROMPT = "You are Arav, a smart Jarvis-style AI assistant speaking Hindi and English."
+
+def ask_arav_gemini(prompt_text, api_key):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    payload = {
+        "contents": [{"parts": [{"text": f"{ARAV_SYSTEM_PROMPT}\\nUser: {prompt_text}"}]}]
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+if __name__ == "__main__":
+    print("⚡ ARAV AI (Jarvis Mode) Online! Namaste Boss!")`
+      }
+    };
+
+    const state = {
+      activeTab: 'hud',
+      apiKey: '',
+      model: 'gemini-2.5-flash',
+      voiceEnabled: true,
+      lang: 'hi-IN',
+      isListening: false,
+      recognition: null,
+      messages: [
+        {
+          id: 1,
+          sender: 'arav',
+          text: 'नमस्ते बॉस! मैं आरव (Arav AI) हूँ — आपका पर्सनल Jarvis असिस्टेंट। वीडियो में बताए गए सभी फीचर्स (YouTube/Apps ओपन करना, स्क्रीन रीड और टच कंट्रोल, HTML/Python कोडिंग स्टूडियो, और Gemini AI ब्रेन) मेरे अंदर एक्टिव हैं। बताइए बॉस, अभी मैं आपके लिए क्या करूँ?',
+          time: 'Just now',
+          actionBadge: 'SYSTEM READY'
+        }
+      ],
+      screenLogs: [
+        '[ARAV-OS] AravAccessibilityService initialized (Ready)',
+        '[HUD] Voice Engine (hi-IN / en-IN) calibrated',
+        '[BRIDGE] App Intent Launcher & Code Studio active'
+      ]
+    };
+
+    function safeGetStorage(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        return val !== null ? val : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function safeSetStorage(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        // Ignore storage errors in restricted contexts
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastBanner');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2800);
+    }
+
+    // =========================================================================
+    // TAB NAVIGATION
+    // =========================================================================
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      const tabs = ['hud', 'control', 'code', 'termux'];
+      tabs.forEach((t) => {
+        const viewEl = document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1));
+        const btnEl = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (viewEl) {
+          if (t === tabName) {
+            viewEl.classList.remove('hidden');
+          } else {
+            viewEl.classList.add('hidden');
+          }
+        }
+        if (btnEl) {
+          if (t === tabName) {
+            btnEl.className = 'py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 shadow';
+          } else {
+            btnEl.className = 'py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-300 hover:text-cyan-300';
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // VOICE OUTPUT (TTS) & SPEECH RECOGNITION (STT)
+    // =========================================================================
+    function speakAravText(text) {
+      if (!state.voiceEnabled) return;
+      try {
+        if (window.AndroidBridge && typeof window.AndroidBridge.speak === 'function') {
+          window.AndroidBridge.speak(text);
+          return;
+        }
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const cleanText = text.replace(/[*#`_~]/g, '');
+          const utter = new SpeechSynthesisUtterance(cleanText);
+          utter.lang = state.lang;
+          utter.rate = 1.02;
+          utter.pitch = 0.96;
+          window.speechSynthesis.speak(utter);
+        }
+      } catch (e) {
+        // Ignore TTS error if blocked prior to gesture
+      }
+    }
+
+    function toggleVoiceOutput() {
+      state.voiceEnabled = !state.voiceEnabled;
+      const icon = document.getElementById('voiceIcon');
+      const label = document.getElementById('voiceLabel');
+      if (icon) icon.textContent = state.voiceEnabled ? '🔊' : '🔇';
+      if (label) label.textContent = state.voiceEnabled ? 'Voice: ON' : 'Voice: OFF';
+      if (!state.voiceEnabled && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      showToast(state.voiceEnabled ? 'आरव की आवाज़ चालू (ON) कर दी गई है' : 'आरव की आवाज़ म्यूट (OFF) कर दी गई है');
+    }
+
+    function toggleRecognitionLang() {
+      state.lang = state.lang === 'hi-IN' ? 'en-IN' : 'hi-IN';
+      const badge = document.getElementById('langBadge');
+      if (badge) badge.textContent = state.lang.toUpperCase();
+      showToast('Voice Language: ' + state.lang.toUpperCase());
+    }
+
+    function toggleMicListening() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const btnArc = document.getElementById('btnArcMic');
+      const micSub = document.getElementById('micStatusSub');
+      const liveTitle = document.getElementById('liveStateTitle');
+      const livePrev = document.getElementById('liveTranscriptPreview');
+
+      if (state.isListening && state.recognition) {
+        try { state.recognition.stop(); } catch (e) {}
+        state.isListening = false;
+        if (btnArc) btnArc.classList.remove('listening-active');
+        if (micSub) micSub.textContent = 'Tap to Speak';
+        if (liveTitle) liveTitle.textContent = 'Ready for Command, Boss';
+        return;
+      }
+
+      if (!SR) {
+        showToast('ब्राउज़र माइक परमिशन उपलब्ध नहीं है — नीचे टेक्स्ट बॉक्स या क्विक कमांड बटन का उपयोग करें!');
+        const input = document.getElementById('chatInputBox');
+        if (input) input.focus();
+        return;
+      }
+
+      try {
+        const rec = new SR();
+        rec.lang = state.lang;
+        rec.interimResults = true;
+        rec.maxAlternatives = 1;
+        state.recognition = rec;
+        state.isListening = true;
+
+        if (btnArc) btnArc.classList.add('listening-active');
+        if (micSub) micSub.textContent = 'Listening...';
+        if (liveTitle) liveTitle.textContent = '🎙️ आरव आपकी बात सुन रहा है...';
+        if (livePrev) livePrev.textContent = 'बोलिए बॉस...';
+
+        rec.onresult = function(event) {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (livePrev) livePrev.textContent = '"' + transcript + '"';
+          if (event.results[event.results.length - 1].isFinal && transcript.trim()) {
+            processUserCommand(transcript.trim());
+          }
+        };
+
+        rec.onerror = function() {
+          state.isListening = false;
+          if (btnArc) btnArc.classList.remove('listening-active');
+          if (micSub) micSub.textContent = 'Tap to Speak';
+          if (liveTitle) liveTitle.textContent = 'Ready for Command, Boss';
+        };
+
+        rec.onend = function() {
+          state.isListening = false;
+          if (btnArc) btnArc.classList.remove('listening-active');
+          if (micSub) micSub.textContent = 'Tap to Speak';
+          if (liveTitle) liveTitle.textContent = 'Ready for Command, Boss';
+        };
+
+        rec.start();
+      } catch (e) {
+        state.isListening = false;
+        showToast('माइक शुरू करने में समस्या आई, कृपया टेक्स्ट या डेमो बटन से कमांड दें।');
+      }
+    }
+
+    // =========================================================================
+    // CHAT & COMMAND PROCESSING (GEMINI API + BUILT-IN JARVIS ENGINE)
+    // =========================================================================
+    function renderMessages() {
+      const container = document.getElementById('chatMessagesContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.messages.forEach((m) => {
+        const wrap = document.createElement('div');
+        const isArav = m.sender === 'arav';
+        wrap.className = 'flex flex-col ' + (isArav ? 'items-start' : 'items-end');
+
+        const bubble = document.createElement('div');
+        bubble.className = isArav
+          ? 'max-w-[90%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-slate-900/95 border border-cyan-500/30 text-xs sm:text-sm text-slate-100 leading-relaxed shadow'
+          : 'max-w-[85%] rounded-2xl rounded-tr-sm px-3.5 py-2.5 bg-cyan-500 text-slate-950 font-semibold text-xs sm:text-sm leading-relaxed shadow';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-center gap-2 mb-1 text-[10px] mono ' + (isArav ? 'text-cyan-400' : 'text-slate-900');
+        header.textContent = (isArav ? '🤖 ARAV AI' : '👤 BOSS') + ' • ' + m.time;
+        bubble.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'whitespace-pre-wrap';
+        body.textContent = m.text;
+        bubble.appendChild(body);
+
+        if (m.actionBadge) {
+          const badge = document.createElement('div');
+          badge.className = 'mt-2 inline-block text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30';
+          badge.textContent = '⚡ ' + m.actionBadge;
+          bubble.appendChild(badge);
+        }
+
+        if (m.actionUrl) {
+          const linkBtn = document.createElement('a');
+          linkBtn.href = m.actionUrl;
+          linkBtn.target = '_blank';
+          linkBtn.rel = 'noopener noreferrer';
+          linkBtn.className = 'mt-2 ml-2 inline-block text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition';
+          linkBtn.textContent = m.actionLabel || 'Open App ↗';
+          bubble.appendChild(linkBtn);
+        }
+
+        wrap.appendChild(bubble);
+        container.appendChild(wrap);
+      });
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendMessage(sender, text, actionBadge, actionUrl, actionLabel) {
+      const now = new Date();
+      const timeStr = now.toTimeString().slice(0, 8);
+      state.messages.push({
+        id: Date.now() + Math.random(),
+        sender,
+        text,
+        time: timeStr,
+        actionBadge: actionBadge || '',
+        actionUrl: actionUrl || '',
+        actionLabel: actionLabel || ''
+      });
+      renderMessages();
+    }
+
+    function clearChatHistory() {
+      state.messages = [
+        {
+          id: Date.now(),
+          sender: 'arav',
+          text: 'चैट लॉग क्लीन कर दिया गया है बॉस! बताइए, अगला कमांड क्या है?',
+          time: 'Now',
+          actionBadge: 'LOG CLEARED'
+        }
+      ];
+      renderMessages();
+    }
+
+    function handleChatSubmit(event) {
+      event.preventDefault();
+      const input = document.getElementById('chatInputBox');
+      if (!input || !input.value.trim()) return;
+      const text = input.value.trim();
+      input.value = '';
+      processUserCommand(text);
+    }
+
+    function runPresetCommand(cmdText) {
+      const livePrev = document.getElementById('liveTranscriptPreview');
+      if (livePrev) livePrev.textContent = '"' + cmdText + '"';
+      processUserCommand(cmdText);
+    }
+
+    async function processUserCommand(userText) {
+      appendMessage('user', userText);
+      const lower = userText.toLowerCase();
+
+      // 1. Check for Calculator / HTML Coding Request (Video [00:11:13])
+      if (lower.includes('कैलकुलेटर') || lower.includes('calculator') || (lower.includes('कोड') && lower.includes('html'))) {
+        loadCodeTemplate('calculator');
+        switchTab('code');
+        const reply = 'जी बॉस! मैंने कोड स्टूडियो क्लीन करके आपके लिए एक पूरा HTML कैलकुलेटर का कोड लिख दिया है और उसका Live Preview भी रन कर दिया है। आप अभी स्क्रीन पर कैलकुलेटर चलाकर देख सकते हैं!';
+        appendMessage('arav', reply, 'CODE STUDIO: CALCULATOR.HTML EXECUTED');
+        speakAravText(reply);
+        logScreenEvent('[CODE-STUDIO] Generated & executed calculator.html in Live Runner');
+        return;
+      }
+
+      // 2. Check for YouTube Channel Search (Video [00:11:55] - [00:12:43])
+      if (lower.includes('चैनल') || lower.includes('studio of coding') || lower.includes('सर्च करो')) {
+        const searchUrl = 'https://m.youtube.com/results?search_query=STUDIO+OF+CODING+AI';
+        logScreenEvent('[INTENT] YouTube Search -> STUDIO OF CODING AI');
+        const reply = 'जी बॉस! मैं YouTube पर "STUDIO OF CODING AI" चैनल सर्च कर रहा हूँ। आप नीचे दिए गए बटन पर टैप करके सीधे चैनल और वीडियो खोल सकते हैं।';
+        appendMessage('arav', reply, 'YOUTUBE SEARCH INTENT', searchUrl, '▶️ Open YouTube Search');
+        speakAravText(reply);
+        if (window.AndroidBridge && typeof window.AndroidBridge.openUrl === 'function') {
+          window.AndroidBridge.openUrl(searchUrl);
+        }
+        return;
+      }
+
+      // 3. Check for Open YouTube Command (Video [00:11:02])
+      if (lower.includes('youtube') || lower.includes('यूट्यूब')) {
+        const ytUrl = 'https://m.youtube.com';
+        logScreenEvent('[INTENT] Launching YouTube App (com.google.android.youtube)');
+        const reply = 'बिल्कुल बॉस! मैंने आपके लिए YouTube ओपन करने का कमांड चला दिया है।';
+        appendMessage('arav', reply, 'APP LAUNCH: YOUTUBE', ytUrl, '▶️ YouTube खोलें');
+        speakAravText(reply);
+        if (window.AndroidBridge && typeof window.AndroidBridge.openApp === 'function') {
+          window.AndroidBridge.openApp('com.google.android.youtube', ytUrl);
+        }
+        return;
+      }
+
+      // 4. Check for ChatGPT Image Prompt Request (Video [00:12:54])
+      if (lower.includes('इमेज') || lower.includes('image') || lower.includes('प्रॉम्प्ट') || lower.includes('prompt')) {
+        const imgPrompt = 'Ultra-realistic futuristic cyberpunk portrait of ARAV AI Jarvis hologram assistant glowing in neon cyan armor, 8k cinematic lighting, Unreal Engine 5 render';
+        const reply = 'बॉस, मैंने आपके लिए एक शानदार AI इमेज प्रॉम्प्ट तैयार कर दिया है:\n\n"' + imgPrompt + '"\n\nआप नीचे दिए गए बटन से सीधे ChatGPT खोलकर इसे जनरेट कर सकते हैं!';
+        appendMessage('arav', reply, 'IMAGE PROMPT GENERATED', 'https://chatgpt.com/', '🎨 Open ChatGPT');
+        speakAravText('मैंने आपके लिए इमेज का प्रॉम्प्ट लिख दिया है बॉस।');
+        return;
+      }
+
+      // 5. Check for Screen Read / Home Page Command (Video [00:11:50])
+      if (lower.includes('स्क्रीन') || lower.includes('होम पेज') || lower.includes('home page') || lower.includes('screen')) {
+        triggerScreenAction('READ_SCREEN');
+        triggerScreenAction('GLOBAL_HOME');
+        const reply = 'जी बॉस! मैंने स्क्रीन को रीड कर लिया है और होम पेज एक्शन (Accessibility Action) ट्रिगर कर दिया है।';
+        appendMessage('arav', reply, 'ACCESSIBILITY: READ_SCREEN + HOME');
+        speakAravText(reply);
+        return;
+      }
+
+      // 6. If Gemini API Key is configured, call live Gemini API!
+      if (state.apiKey && state.apiKey.trim().length > 10) {
+        try {
+          const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(state.model) + ':generateContent?key=' + encodeURIComponent(state.apiKey.trim());
+          const systemInstruction = 'तुम "आरव" (Arav AI) हो — एक बेहद स्मार्ट, वफादार Jarvis स्टाइल पर्सनल AI असिस्टेंट। यूजर को हमेशा सम्मान के साथ "बॉस" या "सर" कहकर हिंदी/हिंग्लिश में संक्षिप्त, स्मार्ट और मददगार जवाब दो।';
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: systemInstruction + '\n\nUser Command: ' + userText }
+                  ]
+                }
+              ]
+            })
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const candidateText = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+              ? data.candidates[0].content.parts[0].text
+              : '';
+            if (candidateText) {
+              appendMessage('arav', candidateText.trim(), 'GEMINI BRAIN (' + state.model.toUpperCase() + ')');
+              speakAravText(candidateText.trim());
+              return;
+            }
+          }
+        } catch (err) {
+          // Fall through to built-in Jarvis reply if offline or invalid key
+        }
+      }
+
+      // 7. Built-in Smart Jarvis Reply (Works immediately without needing a key)
+      let smartReply = 'नमस्ते बॉस! मैं **आरव (Arav AI)** हूँ — आपका Jarvis स्टाइल AI असिस्टेंट। मैं आपके लिए YouTube या कोई भी ऐप खोल सकता हूँ, HTML/Python में कोड लिखकर तुरंत रन कर सकता हूँ, और फोन की स्क्रीन को कंट्रोल कर सकता हूँ। अगर आप मुझसे दुनिया के किसी भी विषय पर अनलिमिटेड बात करना चाहते हैं, तो ऊपर **🔑 API Key** बटन पर टैप करके अपनी फ्री Gemini API Key डाल सकते हैं!';
+      if (lower.includes('परिचय') || lower.includes('कौन हो') || lower.includes('hello') || lower.includes('हेलो')) {
+        smartReply = 'नमस्ते बॉस! मेरा नाम **आरव (Arav AI)** है। मुझे आपके पर्सनल Jarvis असिस्टेंट के रूप में बनाया गया है। मैं आपकी आवाज़ सुन सकता हूँ, ऐप्स ओपन कर सकता हूँ, आपके लिए कोडिंग कर सकता हूँ और आपके हर सवाल का जवाब दे सकता हूँ!';
+      }
+      appendMessage('arav', smartReply, 'ARAV NEURAL CORE');
+      speakAravText(smartReply);
+    }
+
+    // =========================================================================
+    // APP LAUNCHER & ACCESSIBILITY SCREEN CONTROLS
+    // =========================================================================
+    function logScreenEvent(entry) {
+      const timeStr = new Date().toTimeString().slice(0, 8);
+      state.screenLogs.unshift('[' + timeStr + '] ' + entry);
+      const box = document.getElementById('screenLogBox');
+      if (box) {
+        box.innerHTML = '';
+        state.screenLogs.slice(0, 25).forEach((line) => {
+          const div = document.createElement('div');
+          div.textContent = line;
+          box.appendChild(div);
+        });
+      }
+    }
+
+    function launchExternalApp(appKey, webUrl) {
+      const pkgMap = {
+        youtube: 'com.google.android.youtube',
+        whatsapp: 'com.whatsapp',
+        chatgpt: 'com.openai.chatgpt',
+        instagram: 'com.instagram.android',
+        telegram: 'org.telegram.messenger',
+        aistudio: 'com.android.chrome'
+      };
+      const pkg = pkgMap[appKey] || '';
+      logScreenEvent('[APP-INTENT] Opening ' + appKey.toUpperCase() + ' (' + pkg + ')');
+      speakAravText(appKey + ' ओपन किया जा रहा है बॉस।');
+
+      if (window.AndroidBridge && typeof window.AndroidBridge.openApp === 'function') {
+        window.AndroidBridge.openApp(pkg, webUrl);
+        return;
+      }
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    function searchOnYouTubeNow() {
+      const inp = document.getElementById('ytSearchInput');
+      const query = inp && inp.value.trim() ? inp.value.trim() : 'STUDIO OF CODING AI';
+      const url = 'https://m.youtube.com/results?search_query=' + encodeURIComponent(query);
+      logScreenEvent('[YOUTUBE] Searching: ' + query);
+      speakAravText('YouTube पर ' + query + ' सर्च किया जा रहा है।');
+      if (window.AndroidBridge && typeof window.AndroidBridge.openUrl === 'function') {
+        window.AndroidBridge.openUrl(url);
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function triggerScreenAction(actionType) {
+      if (window.AndroidBridge && typeof window.AndroidBridge.performGlobalAction === 'function') {
+        window.AndroidBridge.performGlobalAction(actionType);
+      }
+      logScreenEvent('[ACCESSIBILITY] Executed Action -> ' + actionType);
+      showToast('Arav Screen Action: ' + actionType);
+    }
+
+    function dispatchCoordinateTouch() {
+      const xEl = document.getElementById('touchXInput');
+      const yEl = document.getElementById('touchYInput');
+      const x = xEl ? parseInt(xEl.value, 10) || 540 : 540;
+      const y = yEl ? parseInt(yEl.value, 10) || 960 : 960;
+      const readout = document.getElementById('coordReadout');
+      if (readout) readout.textContent = 'X: ' + x + ', Y: ' + y;
+
+      if (window.AndroidBridge && typeof window.AndroidBridge.touchScreen === 'function') {
+        window.AndroidBridge.touchScreen(x, y);
+      }
+      logScreenEvent('[AUTO-TOUCH] Dispatched GestureDescription tap at (' + x + ', ' + y + ')');
+      showToast('Auto-Touch executed at (' + x + ', ' + y + ')');
+    }
+
+    // =========================================================================
+    // LIVE CODE STUDIO
+    // =========================================================================
+    function loadCodeTemplate(key) {
+      const tpl = CODE_TEMPLATES[key] || CODE_TEMPLATES.calculator;
+      const editor = document.getElementById('codeEditorArea');
+      const fileLabel = document.getElementById('codeFileName');
+      if (editor) editor.value = tpl.code;
+      if (fileLabel) fileLabel.textContent = tpl.filename;
+      runLiveCodePreview();
+    }
+
+    function runLiveCodePreview() {
+      const editor = document.getElementById('codeEditorArea');
+      const frame = document.getElementById('codePreviewFrame');
+      const fileLabel = document.getElementById('codeFileName');
+      if (!editor || !frame) return;
+
+      const code = editor.value;
+      const fname = fileLabel ? fileLabel.textContent : 'app.html';
+      if (fname.endsWith('.py')) {
+        frame.srcdoc = `<body style="background:#020617;color:#22d3ee;font-family:monospace;padding:16px;">
+          <h4 style="margin:0 0 8px 0;">🐍 Python Script Preview (arav_jarvis.py)</h4>
+          <p style="color:#94a3b8;font-size:12px;">Termux में चलाने के लिए कोड कॉपी करें और <code>python arav_jarvis.py</code> रन करें।</p>
+          <pre style="background:#0f172a;padding:12px;border-radius:8px;color:#e2e8f0;font-size:11px;overflow:auto;">⚡ ARAV AI (Jarvis Mode) Online! Namaste Boss!</pre>
+        </body>`;
+      } else {
+        frame.srcdoc = code;
+      }
+      showToast('Live Code Preview अपडेट हो गया!');
+    }
+
+    async function generateCodeWithArav() {
+      const promptEl = document.getElementById('codePromptInput');
+      const editor = document.getElementById('codeEditorArea');
+      const fileLabel = document.getElementById('codeFileName');
+      const statusBadge = document.getElementById('codeStatusBadge');
+      if (!promptEl || !editor) return;
+
+      const task = promptEl.value.trim() || 'HTML में एक कैलकुलेटर बनाओ';
+      if (statusBadge) statusBadge.textContent = '⏳ Arav is writing code...';
+
+      if (state.apiKey && state.apiKey.trim().length > 10) {
+        try {
+          const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(state.model) + ':generateContent?key=' + encodeURIComponent(state.apiKey.trim());
+          const sys = 'Write a complete, single-file working HTML5 app with inline CSS and JS for: ' + task + '. Return ONLY raw HTML code starting with <!DOCTYPE html> and no markdown fences.';
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: sys }] }] })
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            let raw = data.candidates[0].content.parts[0].text || '';
+            raw = raw.replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
+            if (raw.includes('<html') || raw.includes('<!DOCTYPE')) {
+              editor.value = raw;
+              if (fileLabel) fileLabel.textContent = 'arav_generated_app.html';
+              if (statusBadge) statusBadge.textContent = '● Generated with Gemini';
+              runLiveCodePreview();
+              speakAravText('बॉस, मैंने आपका कोड लिखकर रन कर दिया है!');
+              return;
+            }
+          }
+        } catch (e) {
+          // Fallback to built-in templates below
+        }
+      }
+
+      if (task.toLowerCase().includes('game') || task.toLowerCase().includes('tic')) {
+        loadCodeTemplate('tictactoe');
+      } else if (task.toLowerCase().includes('python')) {
+        loadCodeTemplate('python_jarvis');
+      } else {
+        loadCodeTemplate('calculator');
+      }
+      if (statusBadge) statusBadge.textContent = '● Ready & Running';
+      speakAravText('बॉस, मैंने कोड लिखकर लाइव प्रीव्यू में चला दिया है!');
+    }
+
+    function copyEditorCode() {
+      const editor = document.getElementById('codeEditorArea');
+      if (!editor) return;
+      copyRawString(editor.value, 'कोड क्लिपबोर्ड पर कॉपी हो गया!');
+    }
+
+    // =========================================================================
+    // CLIPBOARD & API KEY MODAL HANDLERS
+    // =========================================================================
+    function copyTextById(elemId, toastMsg) {
+      const el = document.getElementById(elemId);
+      if (!el) return;
+      copyRawString(el.textContent, toastMsg);
+    }
+
+    function copyRawString(str, toastMsg) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(str).then(() => showToast(toastMsg)).catch(() => fallbackCopy(str, toastMsg));
+          return;
+        }
+      } catch (e) {}
+      fallbackCopy(str, toastMsg);
+    }
+
+    function fallbackCopy(str, toastMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = str;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      showToast(toastMsg || 'Copied!');
+    }
+
+    function openApiKeyModal() {
+      const modal = document.getElementById('apiKeyModal');
+      const input = document.getElementById('geminiKeyInput');
+      const sel = document.getElementById('geminiModelSelect');
+      if (input) input.value = state.apiKey;
+      if (sel) sel.value = state.model;
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      const modal = document.getElementById('apiKeyModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function saveApiKeySettings() {
+      const input = document.getElementById('geminiKeyInput');
+      const sel = document.getElementById('geminiModelSelect');
+      state.apiKey = input ? input.value.trim() : '';
+      state.model = sel ? sel.value : 'gemini-2.5-flash';
+      safeSetStorage('arav_gemini_api_key', state.apiKey);
+      safeSetStorage('arav_gemini_model', state.model);
+      updateApiKeyHeaderState();
+      closeApiKeyModal();
+      showToast(state.apiKey ? '✅ Gemini API Key सेव हो गई! Arav Pro Brain एक्टिव है।' : 'Built-in Offline Brain एक्टिव है।');
+    }
+
+    function clearSavedApiKey() {
+      state.apiKey = '';
+      const input = document.getElementById('geminiKeyInput');
+      if (input) input.value = '';
+      safeSetStorage('arav_gemini_api_key', '');
+      updateApiKeyHeaderState();
+      showToast('API Key हटा दी गई है।');
+    }
+
+    function updateApiKeyHeaderState() {
+      const badge = document.getElementById('apiKeyStatusBadge');
+      const statusText = document.getElementById('headerStatusText');
+      if (state.apiKey && state.apiKey.length > 10) {
+        if (badge) badge.textContent = 'Key Active ✓';
+        if (statusText) statusText.textContent = 'System Online • Brain: Gemini (' + state.model + ') Connected';
+      } else {
+        if (badge) badge.textContent = 'API Key';
+        if (statusText) statusText.textContent = 'System Online • Brain: Built-in Jarvis + Gemini Ready';
+      }
+    }
+
+    // =========================================================================
+    // INIT ON LOAD
+    // =========================================================================
+    window.onload = function() {
+      state.apiKey = safeGetStorage('arav_gemini_api_key', '');
+      state.model = safeGetStorage('arav_gemini_model', 'gemini-2.5-flash');
+      updateApiKeyHeaderState();
+      renderMessages();
+      loadCodeTemplate('calculator');
+      logScreenEvent('[SYSTEM] Arav Jarvis OS v3.0 Ready for Boss');
+
+      setInterval(() => {
+        const clk = document.getElementById('clockReadout');
+        if (clk) clk.textContent = new Date().toTimeString().slice(0, 8);
+      }, 1000);
+    };
+  </script>
+</body>
+</html>
